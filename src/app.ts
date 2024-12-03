@@ -1,39 +1,24 @@
-import { join } from 'path'
-import { createBot, createProvider, createFlow, addKeyword, utils } from '@builderbot/bot'
-import { MemoryDB as Database } from '@builderbot/bot'
-import { BaileysProvider as Provider } from '@builderbot/provider-baileys'
+import { join } from 'path';
+import { TFlow } from '@builderbot/bot/dist/types';
+import { MemoryDB as Database } from '@builderbot/bot';
+import { BaileysProvider as Provider } from '@builderbot/provider-baileys';
+import { createBot, createProvider, createFlow, addKeyword, utils } from '@builderbot/bot';
+import { welcomeEntry } from './entry/welcome.entry';
+import FlowClass from '@builderbot/bot/dist/io/flowClass';
 
-const PORT = process.env.PORT ?? 3008
+const PORT: number | string = Number(process.env.PORT) ?? 3008;
 
-const discordFlow = addKeyword<Provider, Database>('doc').addAnswer(
-  ['You can see the documentation here', '📄 https://builderbot.app/docs \n', 'Do you want to continue? *yes*'].join(
-    '\n'
-  ),
-  { capture: true },
-  async (ctx, { gotoFlow, flowDynamic }) => {
-    if (ctx.body.toLocaleLowerCase().includes('yes')) {
-      return gotoFlow(registerFlow)
-    }
-    await flowDynamic('Thanks!')
-    return
-  }
-)
-
-const welcomeFlow = addKeyword<Provider, Database>(['hi', 'hello', 'hola'])
-  .addAnswer(`🙌 Hello welcome to this *Chatbot*`)
+const welcomeFlow: TFlow<Provider, Database> = addKeyword<Provider, Database>(welcomeEntry)
+  .addAnswer('Hola, Bienvenid@ a Divino Placer! 😊')
   .addAnswer(
     [
-      'I share with you the following links of interest about the project',
-      '👉 *doc* to view the documentation',
+      'Espero te encuentres bien, te invito a conocer más sobre nosotros',
+      '👉 puedes visitarnos en https://divinoplacer.com',
     ].join('\n'),
-    { delay: 800, capture: true },
-    async (ctx, { fallBack }) => {
-      if (!ctx.body.toLocaleLowerCase().includes('doc')) {
-        return fallBack('You should type *doc*')
-      }
-      return
-    },
-    [discordFlow]
+    { delay: 2000, capture: true, buttons: [{
+      body: 'doc',
+    }] },
+    // [discordFlow] -> This line is commented out because the `discordFlow` variable is not defined in this file
   )
 
 const registerFlow = addKeyword<Provider, Database>(utils.setEvent('REGISTER_FLOW'))
@@ -59,10 +44,10 @@ const fullSamplesFlow = addKeyword<Provider, Database>(['samples', utils.setEven
   })
 
 const main = async () => {
-  const adapterFlow = createFlow([welcomeFlow, registerFlow, fullSamplesFlow])
+  const adapterFlow: FlowClass = createFlow([welcomeFlow, registerFlow, fullSamplesFlow])
 
   // const adapterProvider = createProvider(Provider)
-  const adapterDB = new Database()
+  const adapterDB: Database = new Database()
 
   const { httpServer } = await createBot({
     flow: adapterFlow,
