@@ -9,7 +9,21 @@ import { welcomeEntry } from './entry/welcome.entry';
 const options: ActionPropertiesKeyword = {
   capture: true,
   delay: 5000,
+
 };
+
+const provider = createProvider(Provider);
+
+const welcomeFlow2 = addKeyword<Provider, Database>(['template', 'plantilla'])
+  .addAction(async (ctx) => {
+    await provider.sendMessage(ctx.from,
+      'Agregar dos botones que permiten al cliente dar una respuesta mas rapida',
+      {
+        contentSid: 'HXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+      }
+    )
+  })
+
 
 const standardMessages = [
   'Mi nombre es Sofía y seré su asesora el día de hoy, ¿con quién tengo el gusto de hablar?',
@@ -42,6 +56,13 @@ const locationFlow = addKeyword<Provider, Database>(['bogotá', 'ubicacion'])
         body: 'Ubicación en Google Maps 🗺️',
       }
     ]
+  })
+  .addAction(async (ctx) => {
+    await provider.sendLocation('keilerguardo.com',
+      '4.66712082290728',
+      '-74.0537005488327',
+      'Agregar dos botones que permiten al cliente dar una respuesta mas rapida',
+    )
   });
 
 // Podemos preguntar el nombre aqui
@@ -100,7 +121,8 @@ const main = async () => {
     welcomeFlow,
     registerFlow,
     fullSamplesFlow,
-    mainFlow
+    mainFlow,
+    welcomeFlow2
   ])
 
   // const adapterProvider = createProvider(Provider)
