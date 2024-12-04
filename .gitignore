@@ -3,3 +3,4 @@ node_modules/
 *.log
 bot.qr.png
 .env
+bot_sessions
