@@ -36,8 +36,7 @@ const dispoFlow = addKeyword<Provider, Database>([
   'Hola, estoy buscando',
   '¡Hola! 😊 Tropecé con su sitio web y me picó la curiosidad',
   'Hola, tienes',
-]).addAnswer('Hola, claro que sí, ¿en qué puedo ayudarte?')
-.addAnswer(standardMessages, options);
+]).addAnswer(standardMessages, options);
 
 const sendLocationFlow = addKeyword<Provider, Database>([
   '¿Hacen envíos?',
@@ -54,13 +53,11 @@ const sendLocationFlow = addKeyword<Provider, Database>([
 
   if (ctx.body.toLowerCase() === 'bogotá' || ctx.body.toLowerCase() === 'bogota') {
     return flowDynamic([
-      'Nuestros envíos son gratuitos para compras superiores a $100.000.',
-      'En bogotá llegaría el mismo día de la compra.'
+      'Ayudanos con tu dirección para cotizar el envío 🚚',
     ]);
   } else {
     return flowDynamic([
-      'Nuestros envíos son gratuitos para compras superiores a $100.000.',
-      'En el resto del país llegaría en 24 a 48 horas días hábiles.'
+      `En ${ctx.body} legaría en 24 a 48 horas d¿ías hábiles.`,
     ]);
   }
 });
@@ -70,6 +67,8 @@ const locationFlow = addKeyword<Provider, Database>([
   'ubicacion',
   'donde estan ubicados',
   'como los encuentro',
+  'Donde están ubicados?',
+  'Donde están ubicados',
   'direccion',
   'dirección',
   'donde estan',
