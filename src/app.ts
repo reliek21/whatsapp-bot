@@ -1,116 +1,101 @@
 import { MemoryDB as Database } from '@builderbot/bot';
 import FlowClass from '@builderbot/bot/dist/io/flowClass';
 import { BaileysProvider as Provider } from '@builderbot/provider-baileys';
-import { ActionPropertiesKeyword, TFlow } from '@builderbot/bot/dist/types';
-import { createBot, createProvider, createFlow, addKeyword, utils } from '@builderbot/bot';
-
-import { welcomeEntry } from './entry/welcome.entry';
+import { ActionPropertiesKeyword } from '@builderbot/bot/dist/types';
+import { createBot, createProvider, createFlow, addKeyword } from '@builderbot/bot';
 
 const options: ActionPropertiesKeyword = {
   capture: true,
-  delay: 5000,
-
+  delay: 9000,
 };
-
-const provider = createProvider(Provider);
-
-const welcomeFlow2 = addKeyword<Provider, Database>(['template', 'plantilla'])
-  .addAction(async (ctx) => {
-    await provider.sendMessage(ctx.from,
-      'Agregar dos botones que permiten al cliente dar una respuesta mas rapida',
-      {
-        contentSid: 'HXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-      }
-    )
-  })
-
 
 const standardMessages = [
   'Mi nombre es Sofía y seré su asesora el día de hoy, ¿con quién tengo el gusto de hablar?',
-  'Estamos ubicados en Bogotá. ¿De qué ciudad te comunicas con nosotros ?'
+  'Estamos ubicados en Bogotá. ¿De qué ciudad te comunicas con nosotros?'
 ];
 
-const morningFlow = addKeyword<Provider, Database>(['buenos días', 'buenos dias'])
-  .addAnswer('Hola Buenos días 🌞')
+const morningFlow = addKeyword<Provider, Database>(['buenos días', 'dias', 'buenos dias', 'hola, buenos dias'])
+  .addAnswer('Hola Buenos días 🌞', { delay: 3000 })
   .addAnswer(standardMessages, options);
 
-const afternoonFlow = addKeyword<Provider, Database>(['buenas tardes'])
-  .addAnswer('Hola Buenas tardes 🌞')
+const afternoonFlow = addKeyword<Provider, Database>(['buenas tardes', 'tardes', 'hola, buenas tardes'])
+  .addAnswer('Hola Buenas tardes 🌞', { delay: 3000 })
   .addAnswer(standardMessages, options);
 
-const nightFlow = addKeyword<Provider, Database>(['buenas noches'])
-  .addAnswer('Hola Buenas noches 🌜')
+const nightFlow = addKeyword<Provider, Database>(['buenas noches', 'noches', 'hola, buenas noches'])
+  .addAnswer('Hola Buenas noches 🌜', { delay: 3000 })
   .addAnswer(standardMessages, options);
 
-const locationFlow = addKeyword<Provider, Database>(['bogotá', 'ubicacion'])
-  .addAnswer('Visítanos 😊')
+const dispoFlow = addKeyword<Provider, Database>([
+  'hola, tienes disponibilidad',
+  'disponibilidad',
+  'tienes disponibilidad',
+  'tienes disponibilidad hoy',
+  'tienes disponibilidad mañana',
+  'tienes disponibilidad esta semana',
+  'Hola, estoy buscando',
+  '¡Hola! 😊 Tropecé con su sitio web y me picó la curiosidad',
+  'Hola, tienes',
+]).addAnswer('Hola, claro que sí, ¿en qué puedo ayudarte?')
+.addAnswer(standardMessages, options);
+
+const sendLocationFlow = addKeyword<Provider, Database>([
+  '¿Hacen envíos?',
+  'envios',
+  'hacen envios',
+  'hacen envios a domicilio',
+  'hacen envios a bogota',
+  'envios a domicilio',
+  'envios a bogota',
+]).addAction(async (_, { flowDynamic }) => {
+  return flowDynamic('Si, hacemos envíos a todo el país 🚚. ¿En qué ciudad te encuentras?');
+}).addAction({ capture: true }, async (ctx, { flowDynamic, state }) => {
+  await state.update({ name: ctx.body })
+
+  if (ctx.body.toLowerCase() === 'bogotá' || ctx.body.toLowerCase() === 'bogota') {
+    return flowDynamic([
+      'Nuestros envíos son gratuitos para compras superiores a $100.000.',
+      'En bogotá llegaría el mismo día de la compra.'
+    ]);
+  } else {
+    return flowDynamic([
+      'Nuestros envíos son gratuitos para compras superiores a $100.000.',
+      'En el resto del país llegaría en 24 a 48 horas días hábiles.'
+    ]);
+  }
+});
+
+const locationFlow = addKeyword<Provider, Database>([
+  'bogotá',
+  'ubicacion',
+  'donde estan ubicados',
+  'como los encuentro',
+  'direccion',
+  'dirección',
+  'donde estan',
+  'ubicación',
+  'como llegar',
+  'como llegar a la tienda',
+  'como llegar a la tienda de bogota'
+]).addAnswer('Nos puedes visitar en la siguiente ubicación 😊:', { delay: 5000 })
   .addAnswer([
     'Bogotá - Barrio El Lago',
     'Carrera 14 #80-61 (Divino Placer/Bendito Sex Store)',
     'Lunes a Sábado: 9 :30A.M a 9:30 P.M',
     'Festivos: 12:30 P.M a 7:30 P.M'
   ], {
-    ...options,
-    buttons: [
-      {
-        body: 'Ubicación en Google Maps 🗺️',
-      }
-    ]
-  })
-  .addAction(async (ctx) => {
-    await provider.sendLocation('keilerguardo.com',
-      '4.66712082290728',
-      '-74.0537005488327',
-      'Agregar dos botones que permiten al cliente dar una respuesta mas rapida',
-    )
+    media: 'https://lh3.googleusercontent.com/p/AF1QipO_0WIAD9JXh3Ii534fg_iM-W44WU3yiVb04Zg=s680-w680-h510'
   });
 
-// Podemos preguntar el nombre aqui
-const mainFlow = addKeyword(['example', 'Hi'])
+// We can ask here for the name of the user
+const mainFlow = addKeyword(['dv-palabra-clave'])
   .addAction(async (_, { flowDynamic }) => {
-    return flowDynamic('Hi! how can I help you?');
+    return flowDynamic('Hola, Bienvenido a Divino PLacer, con quien tenemos el gusto de hablar?');
   })
   .addAction({ capture: true }, async (ctx, { flowDynamic, state }) => {
     await state.update({ name: ctx.body })
-    return flowDynamic(`Hello ${ctx.body}, nice to meet) you!`);
-  })
-
-
-
-const welcomeFlow: TFlow<Provider, Database> = addKeyword<Provider, Database>(welcomeEntry)
-  .addAnswer('Hola, Bienvenid@ a Divino Placer! 😊')
-  .addAnswer(
-    [
-      'Espero te encuentres bien, te invito a conocer más sobre nosotros',
-      '👉 puedes visitarnos en https://divinoplacer.com',
-    ].join('\n'),
-    { delay: 2000, capture: true, buttons: [{
-      body: 'doc',
-    }] },
-    // [discordFlow] -> This line is commented out because the `discordFlow` variable is not defined in this file
-  );
-
-const registerFlow = addKeyword<Provider, Database>(utils.setEvent('REGISTER_FLOW'))
-  .addAnswer(`What is your name?`, { capture: true }, async (ctx, { state }) => {
-    await state.update({ name: ctx.body })
-  }, morningFlow)
-  .addAnswer('What is your age?', { capture: true }, async (ctx, { state }) => {
-    await state.update({ age: ctx.body })
-  })
-  .addAction(async (_, { flowDynamic, state }) => {
-    await flowDynamic(`${state.get('name')}, thanks for your information!: Your age: ${state.get('age')}`)
-  })
-
-const fullSamplesFlow = addKeyword<Provider, Database>(['samples', utils.setEvent('SAMPLES')])
-  .addAnswer(`💪 I'll send you a lot files...`)
-  // .addAnswer(`Send image from Local`, { media: join(process.cwd(), 'assets', 'sample.png') })
-  .addAnswer(`Send video from URL`, {
-    media: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExYTJ0ZGdjd2syeXAwMjQ4aWdkcW04OWlqcXI3Ynh1ODkwZ25zZWZ1dCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LCohAb657pSdHv0Q5h/giphy.mp4',
-  })
-  .addAnswer(`Send audio from URL`, { media: 'https://cdn.freesound.org/previews/728/728142_11861866-lq.mp3' })
-  .addAnswer(`Send file from URL`, {
-    media: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-  })
+    return flowDynamic(`Hola, ${ctx.body}, bienvenido a Divino Placer! 😊`);
+  });
 
 const main = async () => {
   const adapterFlow: FlowClass = createFlow([
@@ -118,11 +103,9 @@ const main = async () => {
     afternoonFlow,
     nightFlow,
     locationFlow,
-    welcomeFlow,
-    registerFlow,
-    fullSamplesFlow,
     mainFlow,
-    welcomeFlow2
+    dispoFlow,
+    sendLocationFlow
   ])
 
   // const adapterProvider = createProvider(Provider)
