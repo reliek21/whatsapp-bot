@@ -20,6 +20,19 @@ const getGreetingFlow = (): string => {
   return "nightFlow";
 };
 
+// const normalizeKeyword = (keyword) =>
+//   keyword.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+// const greeting = [
+//   "saludo",
+//   "saludar",
+//   "saludos",
+//   "hola",
+//   "buenos dias",
+//   "buenas tardes",
+//   "buenas noches",
+// ].map(normalizeKeyword);
+
 const greetingStandard: string | [string, ...string[]] = [
   "saludo",
   "saludar",
@@ -60,13 +73,25 @@ const dynamicGreetingFlow = addKeyword<Provider, Database>(greetingStandard)
   })
   .addAnswer(standardMessages, { delay: 2000, capture: true })
   .addAction(async (ctx, { flowDynamic, state }) => {
-    const name: string = ctx.body.toLowerCase();
-    await state.update({ name });
-
-    return await flowDynamic(
-      `Hola, ${name}, Bienvenid@ a Divino Placer 😊, ¿En qué puedo ayudarte el día de hoy?`,
-      { delay: 5000 },
-    );
+    try {
+      const name: string = ctx.body.toLowerCase().trim();
+      if (!name) {
+        return await flowDynamic(
+          "No logré entender tu nombre. ¿Podrías repetirlo, por favor? 😊",
+          { delay: 3000 },
+        );
+      }
+      await state.update({ name });
+      return await flowDynamic(
+        `Hola, ${name}, Bienvenid@ a Divino Placer 😊, ¿En qué puedo ayudarte el día de hoy?`,
+        { delay: 5000 },
+      );
+    } catch (error) {
+      console.error("Error in greeting flow:", error);
+      return flowDynamic(
+        "¡Algo salió mal! Por favor, inténtalo de nuevo más tarde.",
+      );
+    }
   })
   .addAnswer("¿Estas en busca de un producto en especifico?", { delay: 3000 });
 
