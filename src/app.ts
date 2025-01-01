@@ -9,61 +9,33 @@ import {
 } from "@builderbot/bot";
 import { TFlow } from "@builderbot/bot/dist/types";
 
-// standard messages
-const standardMessages: string =
-  "Mi nombre es Sofía y seré su asesora el día de hoy, ¿con quién tengo el gusto de hablar?";
+import { getGreetingFlow } from "./helpers/current-hour.helper";
+import { greetingStandard } from "./messages/greetings.message";
+import { botMessage, standardMessages } from "./messages/sofia.message";
 
-// get the current time to determine the greeting flow
-const getGreetingFlow = (): string => {
-  const hour: number = new Date().getHours();
+// Test identify
+import {
+  GenerateContentResult,
+  GenerativeModel,
+  GoogleGenerativeAI,
+} from "@google/generative-ai";
+const generativeAI = new GoogleGenerativeAI(
+  "AIzaSyB_nsRFHaP_scaFzxrdwGXEQNIpB_rjUSY",
+);
 
-  if (hour >= 5 && hour < 12) return "morningFlow"; // 5 AM - 11:59 AM
-  if (hour >= 12 && hour < 18) return "afternoonFlow"; // 12 PM - 5:59 PM
-  if (hour >= 18 && hour < 24) return "nightFlow"; // 6 PM - 11:59 PM
-  return "assistantMessageFlow"; // 12 AM - 4:59 AM
-};
-
-// const normalizeKeyword = (keyword) =>
-//   keyword.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-// const greeting = [
-//   "saludo",
-//   "saludar",
-//   "saludos",
-//   "hola",
-//   "buenos dias",
-//   "buenas tardes",
-//   "buenas noches",
-// ].map(normalizeKeyword);
-
-const greetingStandard: string | [string, ...string[]] = [
-  "saludo",
-  "saludar",
-  "saludos",
-  "hola",
-  "buenos dias",
-  "buenos días",
-  "buenas tardes",
-  "buenas noches",
-  "buenos días",
-  "dias",
-  "buenos dias",
-  "hola, buenos dias",
-  "buenas tardes",
-  "tardes",
-  "hola, buenas tardes",
-  "buenas noches",
-  "noches",
-  "hola, buenas noches",
-  "hola, tienes disponibilidad",
-  "disponibilidad",
-  "tienes disponibilidad",
-  "¡Hola! 😊 Tropecé con su sitio web y me picó la curiosidad. 🌐 ¿Podrían compartirme más detalles sobre sus productos? 🛍️ ¡Gracias! 🌟",
-  "Hola, tienes",
-];
+const model: GenerativeModel = generativeAI.getGenerativeModel({
+  model: "gemini-1.5-flash",
+});
+const namePrompt: string =
+  "Your task is to determine if the user provided a name. Respond with the name if a name is present, and 'false' if no name is provided. Return only the name or 'false' without additional text or explanation. Input of the user: ";
+const cityPrompt: string =
+  "Your task is to identify if the user mentioned a city in their input. Respond with the name of the city if mentioned, or 'none' if no city is provided. Focus specifically on cities in Colombia. Return only the city name or 'none' without additional text or explanation. Input of the user: ";
 
 // dynamic greeting flow
-const dynamicGreetingFlow: TFlow<Provider, Database> = addKeyword<Provider, Database>(greetingStandard)
+const dynamicGreetingFlow: TFlow<Provider, Database> = addKeyword<
+  Provider,
+  Database
+>(greetingStandard)
   .addAction(async (_, { flowDynamic }) => {
     const greetingFlow: string = getGreetingFlow();
 
@@ -74,9 +46,7 @@ const dynamicGreetingFlow: TFlow<Provider, Database> = addKeyword<Provider, Data
     } else if (greetingFlow === "nightFlow") {
       return flowDynamic("Hola, Buenas noches 🌜");
     } else {
-      return flowDynamic(
-        "¡Hola! 🌟 Soy tu asistente virtual, aquí para asegurarte una experiencia increíble. Aunque nuestra asesora Sofía estará disponible al amanecer, puedes continuar este chat conmigo para resolver tus preguntas básicas. 🌙✨ ¡Estoy aquí para ayudarte!"
-      );
+      return flowDynamic(botMessage);
     }
   })
   .addAnswer(standardMessages, { delay: 2000, capture: true })
@@ -84,50 +54,69 @@ const dynamicGreetingFlow: TFlow<Provider, Database> = addKeyword<Provider, Data
     try {
       const name: string = ctx.body.toLowerCase().trim();
 
-      if (!name || name.length < 2 || /\d|\W/.test(name)) {
+      const result: GenerateContentResult = await model.generateContent(
+        namePrompt + name,
+      );
+      const response: string = result.response.text();
+
+      if (response.trim() === "false") {
         return await flowDynamic(
-          "No logré entender tu nombre. ¿Podrías repetirlo, por favor? 😊",
+          "Super, continuamos, ¿me ayudas con la siguiente pregunta? 😊",
           { delay: 3000 },
         );
       }
 
-      await state.update({ name });
+      await state.update({ response });
       return await flowDynamic(
-        `Hola, ${name}, Bienvenid@ a Divino Placer 😊, nos encontramos ubicados en Bogotá.`,
+        `Hola, ${response.trim()}, Bienvenid@ a Divino Placer 😊, nos encontramos ubicados en Bogotá.`,
         { delay: 5000 },
       );
     } catch (error) {
       console.error("Error in greeting flow:", error);
-      return flowDynamic(
-        "¡Algo salió mal! Por favor, inténtalo de nuevo más tarde.",
-      );
+      return flowDynamic("¡Algo salió mal! Por favor, inténtalo de nuevo.");
     }
   })
   .addAnswer("¿Desde que ciudad nos hablas?", { delay: 2000, capture: true })
   .addAction(async (ctx, { flowDynamic, state }) => {
     const city: string = ctx.body.toLowerCase();
 
-    if (!city || city.trim().length === 0) {
-      return await flowDynamic(
-        "No logré entender tu ciudad. ¿Podrías indicárnosla nuevamente? 😊",
-        { delay: 3000 },
-      );
+    const result: GenerateContentResult = await model.generateContent(
+      cityPrompt + city,
+    );
+    const response: string = result.response.text();
+    const isCity: string = response;
+
+    if (!city || city.trim().length === 0 || isCity === "none" || !isCity) {
+      return await flowDynamic("Ok, continuamos. 😊", { delay: 3000 });
     }
 
     await state.update({ city });
-    if (city === "bogota" || city === "bogotá") {
+
+    const detectBogota: string = city.includes("bogota") ? "bogota" : "";
+    if (detectBogota || isCity.includes("bogota")) {
       return await flowDynamic(
         "Ayúdanos con tu dirección para cotizar el envío 🚚",
         { delay: 5000 },
       );
+    } else if (isCity === "none") {
+      return await flowDynamic(
+        `No logre leer la ciudad, Ingresa de nuevo la ciudad o pues, lo hacemos más adelante. 😊`,
+        { delay: 5000 },
+      );
     } else {
       return await flowDynamic(
-        `Los pedidos a ${ctx.body} llegan en 24 a 48 horas hábiles.`,
+        `Los pedidos a ${isCity} llegan en 24 a 48 horas hábiles.`,
         { delay: 5000 },
       );
     }
   })
-  .addAnswer("¿Estas en busca de un producto en especifico?", { delay: 3000 });
+  .addAction(async (_, { flowDynamic }) => {
+    return await flowDynamic(
+      "¿Estas en busca de una categoria en especifico producto en especifico?",
+      { delay: 3000 },
+    );
+  });
+//.addAnswer("¿Estas en busca de una categoria en especifico producto en especifico?", { delay: 3000 });
 
 const cityFlow = addKeyword<Provider, Database>([
   "donde estan ubicados",
@@ -156,7 +145,8 @@ const cityFlow = addKeyword<Provider, Database>([
   "donde estan ubicados",
   "direccion",
   "como llegar",
-]).addAnswer("Estamos ubicados en Bogotá 😊:", { delay: 5000 })
+])
+  .addAnswer("Estamos ubicados en Bogotá 😊:", { delay: 5000 })
   .addAnswer(
     [
       "Bogotá - Barrio El Lago",
@@ -219,7 +209,7 @@ const main = async () => {
     database: adapterDB,
   });
 
-  httpServer(3008); // Puerto del servidor
+  httpServer(3008);
 };
 
 main();
